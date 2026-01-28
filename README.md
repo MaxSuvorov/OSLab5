@@ -21,6 +21,7 @@
 - `GET /api/stats/daily?from=TS&to=TS` - дневные средние
 - `GET /api/system/info` - информация о системе
 
+
 ## Сборка
 
 ### Windows:
