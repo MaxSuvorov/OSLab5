@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temperature Monitoring System</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #4c6ef5 0%, #3b5bdb 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .current-temp {
+            background: white;
+            margin: 20px;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .temp-display {
+            text-align: center;
+        }
+        
+        .temp-value {
+            font-size: 4em;
+            font-weight: bold;
+            color: #4c6ef5;
+        }
+        
+        .temp-unit {
+            font-size: 1.5em;
+            color: #666;
+        }
+        
+        .temp-info {
+            text-align: right;
+            color: #666;
+        }
+        
+        .controls {
+            padding: 20px;
+            background: #f8f9fa;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        select, input, button {
+            padding: 10px 15px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        select:focus, input:focus {
+            outline: none;
+            border-color: #4c6ef5;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #4c6ef5 0%, #3b5bdb 100%);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(76, 110, 245, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .charts-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+        
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .chart-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+        
+        .stat-box {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .stat-title {
+            font-size: 1em;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #4c6ef5;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        th {
+            background: #f8f9fa;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        
+        .status-connected {
+            background: #40c057;
+        }
+        
+        .status-disconnected {
+            background: #fa5252;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            border-top: 1px solid #dee2e6;
+        }
+        
+        @media (max-width: 768px) {
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .current-temp {
+                flex-direction: column;
+                text-align: center;
+                gap: 20px;
+            }
+            
+            .temp-info {
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🌡️ Temperature Monitoring System</h1>
+            <div class="subtitle">Real-time temperature monitoring with statistics and charts</div>
+        </header>
+        
+        <div class="current-temp">
+            <div class="temp-display">
+                <div class="temp-value" id="currentTemp">--.--</div>
+                <div class="temp-unit">°C</div>
+            </div>
+            <div class="temp-info">
+                <div id="lastUpdate">Last update: --</div>
+                <div id="connectionStatus">
+                    <span class="status-indicator status-disconnected"></span>
+                    <span>Disconnected</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <select id="timeRange">
+                <option value="1">Last hour</option>
+                <option value="24" selected>Last 24 hours</option>
+                <option value="168">Last week</option>
+                <option value="720">Last month</option>
+                <option value="custom">Custom range</option>
+            </select>
+            
+            <div id="customRange" style="display: none;">
+                <input type="datetime-local" id="fromDate">
+                <input type="datetime-local" id="toDate">
+            </div>
+            
+            <select id="chartType">
+                <option value="line">Line Chart</option>
+                <option value="bar">Bar Chart</option>
+            </select>
+            
+            <button onclick="refreshData()">🔄 Refresh</button>
+            <button onclick="downloadData()">📥 Export Data</button>
+            <button onclick="showSystemInfo()">ℹ️ System Info</button>
+        </div>
+        
+        <div class="stats-container">
+            <div class="stat-box">
+                <div class="stat-title">Today's Average</div>
+                <div class="stat-value" id="todayAvg">--.-- °C</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-title">Today's Min/Max</div>
+                <div class="stat-value" id="todayMinMax">--/-- °C</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-title">Measurements Today</div>
+                <div class="stat-value" id="measurementsCount">0</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-title">System Uptime</div>
+                <div class="stat-value" id="uptime">--:--:--</div>
+            </div>
+        </div>
+        
+        <div class="charts-container">
+            <div class="chart-container">
+                <div class="chart-title">Temperature Trend</div>
+                <canvas id="temperatureChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <div class="chart-title">Hourly Averages</div>
+                <canvas id="hourlyChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="chart-container" style="margin: 20px;">
+            <div class="chart-title">Daily Averages (Last 30 Days)</div>
+            <canvas id="dailyChart"></canvas>
+        </div>
+        
+        <div class="chart-container" style="margin: 20px;">
+            <div class="chart-title">Recent Measurements</div>
+            <div style="overflow-x: auto;">
+                <table id="measurementsTable">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Temperature (°C)</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="measurementsTableBody">
+                        <tr><td colspan="3">Loading data...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <footer>
+            <p>Temperature Monitoring System v2.0 | Real-time Data Visualization</p>
+            <p id="serverStatus">Server: Checking...</p>
+        </footer>
+    </div>
+    
+    <script>
+        // Глобальные переменные
+        let temperatureChart = null;
+        let hourlyChart = null;
+        let dailyChart = null;
+        let lastUpdateTime = null;
+        let updateInterval = null;
+        let serverBaseUrl = 'http://localhost:8080/api';
+        
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeCharts();
+            checkServerConnection();
+            refreshData();
+            
+            // Настраиваем обновление каждые 10 секунд
+            updateInterval = setInterval(refreshData, 10000);
+            
+            // Обработчики для элементов управления
+            document.getElementById('timeRange').addEventListener('change', function() {
+                const customRangeDiv = document.getElementById('customRange');
+                if (this.value === 'custom') {
+                    customRangeDiv.style.display = 'flex';
+                } else {
+                    customRangeDiv.style.display = 'none';
+                    refreshData();
+                }
+            });
+            
+            document.getElementById('fromDate').addEventListener('change', refreshData);
+            document.getElementById('toDate').addEventListener('change', refreshData);
+            document.getElementById('chartType').addEventListener('change', refreshData);
+            
+            // Устанавливаем даты по умолчанию для кастомного диапазона
+            const now = new Date();
+            const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+            
+            document.getElementById('fromDate').value = formatDateTimeLocal(yesterday);
+            document.getElementById('toDate').value = formatDateTimeLocal(now);
+        });
+        
+        // Форматирование даты для input[type=datetime-local]
+        function formatDateTimeLocal(date) {
+            return date.toISOString().slice(0, 16);
+        }
+        
+        // Проверка соединения с сервером
+        async function checkServerConnection() {
+            try {
+                const response = await fetch(`${serverBaseUrl}/system/info`);
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('serverStatus').textContent = 
+                        `Server: Connected | Version: ${data.version} | Status: ${data.status}`;
+                    
+                    const statusIndicator = document.querySelector('#connectionStatus .status-indicator');
+                    statusIndicator.className = 'status-indicator status-connected';
+                    document.querySelector('#connectionStatus span:last-child').textContent = 'Connected';
+                    
+                    return true;
+                }
+            } catch (error) {
+                console.error('Server connection error:', error);
+            }
+            
+            document.getElementById('serverStatus').textContent = 'Server: Not connected';
+            const statusIndicator = document.querySelector('#connectionStatus .status-indicator');
+            statusIndicator.className = 'status-indicator status-disconnected';
+            document.querySelector('#connectionStatus span:last-child').textContent = 'Disconnected';
+            
+            return false;
+        }
+        
+        // Основная функция обновления данных
+        async function refreshData() {
+            try {
+                // Обновляем текущую температуру
+                await updateCurrentTemperature();
+                
+                // Обновляем измерения за выбранный период
+                await updateMeasurements();
+                
+                // Обновляем статистику
+                await updateStatistics();
+                
+                // Обновляем графики
+                updateCharts();
+                
+                // Обновляем таблицу
+                updateMeasurementsTable();
+                
+                lastUpdateTime = new Date();
+                updateUptime();
+                
+            } catch (error) {
+                console.error('Error refreshing data:', error);
+                showNotification('Error loading data. Please check server connection.', 'error');
+            }
+        }
+        
+        // Обновление текущей температуры
+        async function updateCurrentTemperature() {
+            try {
+                const response = await fetch(`${serverBaseUrl}/current`);
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('currentTemp').textContent = 
+                        data.current_temperature.toFixed(2);
+                    
+                    const updateDate = new Date(data.last_update * 1000);
+                    document.getElementById('lastUpdate').textContent = 
+                        `Last update: ${updateDate.toLocaleString()}`;
+                }
+            } catch (error) {
+                console.error('Error fetching current temperature:', error);
+            }
+        }
+        
+        // Обновление измерений
+        async function updateMeasurements() {
+            window.measurementsData = [];
+            
+            const timeRange = document.getElementById('timeRange').value;
+            let fromTime, toTime;
+            
+            if (timeRange === 'custom') {
+                const fromDate = new Date(document.getElementById('fromDate').value);
+                const toDate = new Date(document.getElementById('toDate').value);
+                fromTime = Math.floor(fromDate.getTime() / 1000);
+                toTime = Math.floor(toDate.getTime() / 1000);
+            } else {
+                const hours = parseInt(timeRange);
+                toTime = Math.floor(Date.now() / 1000);
+                fromTime = toTime - (hours * 3600);
+            }
+            
+            try {
+                const response = await fetch(
+                    `${serverBaseUrl}/measurements?from=${fromTime}&to=${toTime}&limit=500`
+                );
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    window.measurementsData = data.measurements.map(m => ({
+                        time: new Date(m.timestamp * 1000),
+                        temperature: m.temperature
+                    })).reverse(); // Сортируем по времени
+                    
+                    // Рассчитываем статистику за сегодня
+                    calculateTodayStats();
+                }
+            } catch (error) {
+                console.error('Error fetching measurements:', error);
+            }
+        }
+        
+        // Обновление статистики
+        async function updateStatistics() {
+            try {
+                // Запрашиваем часовые средние за последние 24 часа
+                const toTime = Math.floor(Date.now() / 1000);
+                const fromTime = toTime - (24 * 3600);
+                
+                const hourlyResponse = await fetch(
+                    `${serverBaseUrl}/stats/hourly?from=${fromTime}&to=${toTime}`
+                );
+                
+                if (hourlyResponse.ok) {
+                    const data = await hourlyResponse.json();
+                    window.hourlyStats = data.hourly_averages.map(stat => ({
+                        hour: new Date(stat.hour_start * 1000),
+                        average: stat.average_temperature,
+                        count: stat.measurement_count
+                    }));
+                }
+                
+                // Запрашиваем дневные средние за последние 30 дней
+                const dailyFromTime = toTime - (30 * 24 * 3600);
+                
+                const dailyResponse = await fetch(
+                    `${serverBaseUrl}/stats/daily?from=${dailyFromTime}&to=${toTime}`
+                );
+                
+                if (dailyResponse.ok) {
+                    const data = await dailyResponse.json();
+                    window.dailyStats = data.daily_averages.map(stat => ({
+                        day: new Date(stat.day_start * 1000),
+                        average: stat.average_temperature,
+                        count: stat.measurement_count
+                    }));
+                }
+                
+            } catch (error) {
+                console.error('Error fetching statistics:', error);
+            }
+        }
+        
+        // Расчет статистики за сегодня
+        function calculateTodayStats() {
+            if (!window.measurementsData || window.measurementsData.length === 0) {
+                return;
+            }
+            
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            const todayMeasurements = window.measurementsData.filter(m => 
+                m.time >= today
+            );
+            
+            if (todayMeasurements.length > 0) {
+                const temperatures = todayMeasurements.map(m => m.temperature);
+                const avg = temperatures.reduce((a, b) => a + b, 0) / temperatures.length;
+                const min = Math.min(...temperatures);
+                const max = Math.max(...temperatures);
+                
+                document.getElementById('todayAvg').textContent = `${avg.toFixed(2)} °C`;
+                document.getElementById('todayMinMax').textContent = `${min.toFixed(1)}/${max.toFixed(1)} °C`;
+                document.getElementById('measurementsCount').textContent = temperatures.length;
+            }
+        }
+        
+        // Инициализация графиков
+        function initializeCharts() {
+            const chartType = document.getElementById('chartType').value;
+            
+            // Основной график температуры
+            const tempCtx = document.getElementById('temperatureChart').getContext('2d');
+            temperatureChart = new Chart(tempCtx, {
+                type: chartType,
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Temperature (°C)',
+                        data: [],
+                        borderColor: 'rgb(75, 192, 192)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Time'
+                            }
+                        },
+                        y: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Temperature (°C)'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // График часовых средних
+            const hourlyCtx = document.getElementById('hourlyChart').getContext('2d');
+            hourlyChart = new Chart(hourlyCtx, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Hourly Average (°C)',
+                        data: [],
+                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                        borderColor: 'rgb(54, 162, 235)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Hour'
+                            }
+                        },
+                        y: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Temperature (°C)'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // График дневных средних
+            const dailyCtx = document.getElementById('dailyChart').getContext('2d');
+            dailyChart = new Chart(dailyCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Daily Average (°C)',
+                        data: [],
+                        borderColor: 'rgb(255, 99, 132)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Date'
+                            }
+                        },
+                        y: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Temperature (°C)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Обновление графиков
+        function updateCharts() {
+            if (!window.measurementsData || !window.hourlyStats || !window.dailyStats) {
+                return;
+            }
+            
+            // Обновляем основной график
+            const chartType = document.getElementById('chartType').value;
+            temperatureChart.config.type = chartType;
+            
+            temperatureChart.data.labels = window.measurementsData.map(m => 
+                m.time.toLocaleTimeString()
+            );
+            temperatureChart.data.datasets[0].data = window.measurementsData.map(m => 
+                m.temperature
+            );
+            temperatureChart.update();
+            
+            // Обновляем график часовых средних
+            hourlyChart.data.labels = window.hourlyStats.map(stat => 
+                stat.hour.getHours() + ':00'
+            );
+            hourlyChart.data.datasets[0].data = window.hourlyStats.map(stat => 
+                stat.average
+            );
+            hourlyChart.update();
+            
+            // Обновляем график дневных средних
+            dailyChart.data.labels = window.dailyStats.map(stat => 
+                stat.day.toLocaleDateString()
+            );
+            dailyChart.data.datasets[0].data = window.dailyStats.map(stat => 
+                stat.average
+            );
+            dailyChart.update();
+        }
+        
+        // Обновление таблицы измерений
+        function updateMeasurementsTable() {
+            const tableBody = document.getElementById('measurementsTableBody');
+            
+            if (!window.measurementsData || window.measurementsData.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="3">No data available</td></tr>';
+                return;
+            }
+            
+            // Отображаем только последние 20 измерений
+            const recentMeasurements = window.measurementsData.slice(-20).reverse();
+            
+            tableBody.innerHTML = recentMeasurements.map(measurement => `
+                <tr>
+                    <td>${measurement.time.toLocaleTimeString()}</td>
+                    <td>${measurement.temperature.toFixed(2)}</td>
+                    <td>${measurement.time.toLocaleDateString()}</td>
+                </tr>
+            `).join('');
+        }
+        
+        // Обновление времени работы
+        function updateUptime() {
+            if (!lastUpdateTime) return;
+            
+            const now = new Date();
+            const diff = Math.floor((now - lastUpdateTime) / 1000);
+            
+            const hours = Math.floor(diff / 3600);
+            const minutes = Math.floor((diff % 3600) / 60);
+            const seconds = diff % 60;
+            
+            document.getElementById('uptime').textContent = 
+                `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+        
+        // Экспорт данных
+        function downloadData() {
+            if (!window.measurementsData || window.measurementsData.length === 0) {
+                showNotification('No data to export', 'warning');
+                return;
+            }
+            
+            const csvContent = [
+                ['Time', 'Date', 'Temperature (°C)'],
+                ...window.measurementsData.map(m => [
+                    m.time.toLocaleTimeString(),
+                    m.time.toLocaleDateString(),
+                    m.temperature.toFixed(2)
+                ])
+            ].map(row => row.join(',')).join('\n');
+            
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `temperature_data_${new Date().toISOString().slice(0, 10)}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            showNotification('Data exported successfully', 'success');
+        }
+        
+        // Показать информацию о системе
+        async function showSystemInfo() {
+            try {
+                const response = await fetch(`${serverBaseUrl}/system/info`);
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    const infoText = `
+                        System: ${data.system}
+                        Version: ${data.version}
+                        Status: ${data.status}
+                        Current Temperature: ${data.current_temperature}°C
+                        Measurements in DB: ${data.measurements_count}
+                        Server Time: ${new Date(data.server_time * 1000).toLocaleString()}
+                    `;
+                    
+                    alert(infoText);
+                }
+            } catch (error) {
+                console.error('Error fetching system info:', error);
+                showNotification('Error fetching system information', 'error');
+            }
+        }
+        
+        // Вспомогательная функция для уведомлений
+        function showNotification(message, type = 'info') {
+            // Создаем уведомление
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 15px 20px;
+                border-radius: 8px;
+                color: white;
+                font-weight: bold;
+                z-index: 1000;
+                animation: slideIn 0.3s ease-out;
+            `;
+            
+            switch(type) {
+                case 'success':
+                    notification.style.backgroundColor = '#40c057';
+                    break;
+                case 'error':
+                    notification.style.backgroundColor = '#fa5252';
+                    break;
+                case 'warning':
+                    notification.style.backgroundColor = '#fab005';
+                    break;
+                default:
+                    notification.style.backgroundColor = '#4c6ef5';
+            }
+            
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            // Удаляем уведомление через 3 секунды
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 3000);
+            
+            // Добавляем CSS анимации
+            if (!document.getElementById('notification-styles')) {
+                const style = document.createElement('style');
+                style.id = 'notification-styles';
+                style.textContent = `
+                    @keyframes slideIn {
+                        from { transform: translateX(100%); opacity: 0; }
+                        to { transform: translateX(0); opacity: 1; }
+                    }
+                    @keyframes slideOut {
+                        from { transform: translateX(0); opacity: 1; }
+                        to { transform: translateX(100%); opacity: 0; }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+        }
+        
+        // Периодическая проверка соединения
+        setInterval(checkServerConnection, 30000);
+        
+        // Обновление времени каждую секунду
+        setInterval(updateUptime, 1000);
+    </script>
+</body>
+</html>
